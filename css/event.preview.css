@@ -1,0 +1,22 @@
+/**
+ * @file
+ * Styles for event preview page.
+ */
+
+.event-preview-container {
+  position: fixed;
+  z-index: 499;
+  width: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+@media only screen and (min-width: 36em) {
+  .event-preview-container .form-type-select {
+    margin-left: 25%; /* LTR */
+  }
+  [dir="rtl"] .event-preview-container .form-type-select {
+    margin-right: 25%;
+    margin-left: 0;
+  }
+}

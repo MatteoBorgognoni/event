@@ -1,0 +1,42 @@
+<?php
+
+/**
+ * @file
+ * Contains eventbrite.module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function event_eventbrite_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the eventbrite module.
+    case 'help.page.event_eventbrite':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Eventbrite integration') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function event_eventbrite_theme($existing, $type, $theme, $path) {
+  $themes = [];
+
+  $themes['eventbrite_button'] = [
+    'variables' => [
+      'title' => NULL,
+      'url' => NULL,
+      'id' => NULL,
+    ],
+  ];
+
+  return $themes;
+
+}

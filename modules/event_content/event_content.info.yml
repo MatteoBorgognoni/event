@@ -1,0 +1,5 @@
+name: 'Event Content'
+type: module
+description: 'Provides Event content entity'
+core: 8.x
+package: 'Events'

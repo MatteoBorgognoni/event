@@ -1,0 +1,15 @@
+
+# Event content menu items definition
+entity.event_content.collection:
+  title: 'Events content'
+  route_name: entity.event_content.collection
+  description: 'List Event content entities'
+  parent: entity.event.content
+  weight: 100
+
+event_content.admin.structure.settings:
+  title: 'Event content settings'
+  description: 'Configure Event content entities'
+  route_name: event_content.settings
+  parent: entity.events.modules
+  weight: 99

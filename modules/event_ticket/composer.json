@@ -1,0 +1,14 @@
+{
+  "name": "drupal/event_ticket",
+  "type": "drupal-module",
+  "description": "Provides Event Ticket entity",
+  "keywords": ["Drupal"],
+  "license": "GPL-2.0+",
+  "homepage": "https://www.drupal.org/project/event_ticket",
+  "minimum-stability": "dev",
+  "support": {
+    "issues": "https://www.drupal.org/project/issues/event_ticket",
+    "source": "http://cgit.drupalcode.org/event_ticket"
+  },
+  "require": { }
+}

@@ -1,0 +1,141 @@
+event.multiple_delete_confirm:
+  path: '/admin/events/event/delete'
+  defaults:
+    _form: '\Drupal\event\Form\DeleteMultiple'
+  requirements:
+    _permission: 'administer events'
+
+entity.event.collection:
+  path: '/admin/events'
+  defaults:
+    _entity_list: 'event'
+    _title: 'Events'
+  requirements:
+    _permission: 'access event overview'
+
+event.add_page:
+  path: '/event/add'
+  defaults:
+    _title: 'Add event'
+    _controller: '\Drupal\event\Controller\EventController::addPage'
+  options:
+    _event_operation_route: TRUE
+  requirements:
+    _event_add_access: 'event'
+
+event.add:
+  path: '/event/add/{event_type}'
+  defaults:
+    _controller: '\Drupal\event\Controller\EventController::add'
+    _title_callback: '\Drupal\event\Controller\EventController::addPageTitle'
+  requirements:
+    _event_add_access: 'event:{event_type}'
+  options:
+    _event_operation_route: TRUE
+    parameters:
+      event_type:
+        with_config_overrides: TRUE
+
+entity.event.preview:
+  path: '/event/preview/{event_preview}/{view_mode_id}'
+  defaults:
+    _controller: '\Drupal\event\Controller\EventPreviewController::view'
+    _title_callback: '\Drupal\event\Controller\EventPreviewController::title'
+  requirements:
+    _event_preview_access: '{event_preview}'
+  options:
+    parameters:
+      event_preview:
+        type: 'event_preview'
+
+entity.event.version_history:
+  path: '/event/{event}/revisions'
+  defaults:
+    _title: 'Revisions'
+    _controller: '\Drupal\event\Controller\EventController::revisionOverview'
+  requirements:
+    _access_event_revision: 'view'
+    event: \d+
+  options:
+    _event_operation_route: TRUE
+
+entity.event.revision:
+  path: '/event/{event}/revisions/{event_revision}/view'
+  defaults:
+    _controller: '\Drupal\event\Controller\EventController::revisionShow'
+    _title_callback: '\Drupal\event\Controller\EventController::revisionPageTitle'
+  requirements:
+    _access_event_revision: 'view'
+    event: \d+
+
+event.revision_revert_confirm:
+  path: '/event/{event}/revisions/{event_revision}/revert'
+  defaults:
+    _form: '\Drupal\event\Form\EventRevisionRevertForm'
+    _title: 'Revert to earlier revision'
+  requirements:
+    _access_event_revision: 'update'
+    event: \d+
+  options:
+    _event_operation_route: TRUE
+
+event.revision_revert_translation_confirm:
+  path: '/event/{event}/revisions/{event_revision}/revert/{langcode}'
+  defaults:
+    _form: '\Drupal\event\Form\EventRevisionRevertTranslationForm'
+    _title: 'Revert to earlier revision of a translation'
+  requirements:
+    _access_event_revision: 'update'
+    event: \d+
+  options:
+    _event_operation_route: TRUE
+
+event.revision_delete_confirm:
+  path: '/event/{event}/revisions/{event_revision}/delete'
+  defaults:
+    _form: '\Drupal\event\Form\EventRevisionDeleteForm'
+    _title: 'Delete earlier revision'
+  requirements:
+    _access_event_revision: 'delete'
+    event: \d+
+  options:
+    _event_operation_route: TRUE
+
+entity.event_type.collection:
+  path: '/admin/structure/event-types'
+  defaults:
+    _entity_list: 'event_type'
+    _title: 'Event types'
+  requirements:
+    _permission: 'administer event types'
+
+event.type_add:
+  path: '/admin/structure/event-types/add'
+  defaults:
+    _entity_form: 'event_type.add'
+    _title: 'Add event type'
+  requirements:
+    _permission: 'administer event types'
+
+entity.event_type.edit_form:
+  path: '/admin/structure/event-types/manage/{event_type}'
+  defaults:
+    _entity_form: 'event_type.edit'
+    _title_callback: '\Drupal\Core\Entity\Controller\EntityController::title'
+  requirements:
+    _permission: 'administer event types'
+
+entity.event_type.delete_form:
+  path: '/admin/structure/event-types/manage/{event_type}/delete'
+  defaults:
+    _entity_form: 'event_type.delete'
+    _title: 'Delete'
+  requirements:
+    _entity_access: 'event_type.delete'
+
+event.configure_rebuild_confirm:
+  path: '/admin/reports/status/events-rebuild'
+  defaults:
+    _form: 'Drupal\event\Form\RebuildPermissionsForm'
+  requirements:
+    _permission: 'access administration pages'

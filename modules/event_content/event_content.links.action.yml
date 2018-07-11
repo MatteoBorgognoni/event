@@ -1,0 +1,5 @@
+entity.event_content.add_form:
+  route_name: entity.event_content.add_form
+  title: 'Add Event content'
+  appears_on:
+    - entity.event_content.collection

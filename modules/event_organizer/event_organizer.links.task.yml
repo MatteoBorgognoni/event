@@ -1,0 +1,23 @@
+# Organizer routing definition
+
+entity.organizer.canonical:
+  route_name: entity.organizer.canonical
+  base_route: entity.organizer.canonical
+  title: 'View'
+
+entity.organizer.edit_form:
+  route_name: entity.organizer.edit_form
+  base_route: entity.organizer.canonical
+  title: 'Edit'
+
+entity.organizer.version_history:
+  route_name: entity.organizer.version_history
+  base_route: entity.organizer.canonical
+  title: 'Revisions'
+
+entity.organizer.delete_form:
+  route_name:  entity.organizer.delete_form
+  base_route:  entity.organizer.canonical
+  title: Delete
+  weight: 10
+

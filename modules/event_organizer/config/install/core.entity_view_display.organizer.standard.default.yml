@@ -1,0 +1,29 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - event_organizer.organizer_type.standard
+  module:
+    - user
+id: organizer.standard.default
+targetEntityType: organizer
+bundle: standard
+mode: default
+content:
+  name:
+    label: above
+    type: string
+    weight: -4
+    region: content
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+  user_id:
+    label: hidden
+    type: author
+    weight: 0
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+hidden:
+  langcode: true

@@ -1,0 +1,24 @@
+<?php
+
+/**
+ * @file
+ * Contains event_content.module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function event_content_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the event_content module.
+    case 'help.page.event_content':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Provides Event content entity') . '</p>';
+      return $output;
+
+    default:
+  }
+}

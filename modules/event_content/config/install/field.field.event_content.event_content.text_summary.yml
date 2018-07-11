@@ -1,0 +1,26 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.event_content.text_summary
+  module:
+    - allowed_formats
+    - text
+third_party_settings:
+  allowed_formats:
+    plain_text: plain_text
+    basic_html: '0'
+    restricted_html: '0'
+    full_html: '0'
+id: event_content.event_content.text_summary
+field_name: text_summary
+entity_type: event_content
+bundle: event_content
+label: 'Summary text'
+description: 'Enter a sentence that succinctly describes the page for display in Listing pages and Navigational blocks. The text you enter has a character limit.'
+required: true
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: text_long

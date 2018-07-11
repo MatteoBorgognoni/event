@@ -1,0 +1,58 @@
+<?php
+
+/**
+ * @file
+ * Contains event_organizer.module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function event_organizer_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the event_organizer module.
+    case 'help.page.event_organizer':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Provides the Organiser entity for the event module') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function event_organizer_theme() {
+  $theme = [];
+  $theme['organizer'] = [
+    'render element' => 'elements',
+    'file' => 'organizer.page.inc',
+    'template' => 'organizer',
+  ];
+  $theme['organizer_content_add_list'] = [
+    'render element' => 'content',
+    'variables' => ['content' => NULL],
+    'file' => 'organizer.page.inc',
+  ];
+  return $theme;
+}
+
+/**
+* Implements hook_theme_suggestions_HOOK().
+*/
+function event_organizer_theme_suggestions_organizer(array $variables) {
+  $suggestions = [];
+  $entity = $variables['elements']['#organizer'];
+  $sanitized_view_mode = strtr($variables['elements']['#view_mode'], '.', '_');
+
+  $suggestions[] = 'organizer__' . $sanitized_view_mode;
+  $suggestions[] = 'organizer__' . $entity->bundle();
+  $suggestions[] = 'organizer__' . $entity->bundle() . '__' . $sanitized_view_mode;
+  $suggestions[] = 'organizer__' . $entity->id();
+  $suggestions[] = 'organizer__' . $entity->id() . '__' . $sanitized_view_mode;
+  return $suggestions;
+}

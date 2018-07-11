@@ -1,0 +1,14 @@
+{
+  "name": "drupal/event_organizer",
+  "type": "drupal-module",
+  "description": "Provides the Organiser entity for the event module",
+  "keywords": ["Drupal"],
+  "license": "GPL-2.0+",
+  "homepage": "https://www.drupal.org/project/event_organizer",
+  "minimum-stability": "dev",
+  "support": {
+    "issues": "https://www.drupal.org/project/issues/event_organizer",
+    "source": "http://cgit.drupalcode.org/event_organizer"
+  },
+  "require": { }
+}

@@ -1,0 +1,7 @@
+name: 'Event Venue'
+type: module
+description: 'Provide Venue entity for the event module'
+core: 8.x
+package: 'Events'
+deoendencies:
+  - geolocation_google_maps

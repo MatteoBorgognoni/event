@@ -1,0 +1,18 @@
+
+# Organizer menu items definition
+entity.organizer.collection:
+  title: 'Event Organizers'
+  route_name: entity.organizer.collection
+  description: 'List Organizer entities'
+  parent: entity.event.collection
+  weight: 100
+
+
+# Organizer type menu items definition
+entity.organizer_type.collection:
+  title: 'Organizer types'
+  route_name: entity.organizer_type.collection
+  description: 'List Organizer type (bundles)'
+  parent: entity.events.modules
+  weight: 99
+

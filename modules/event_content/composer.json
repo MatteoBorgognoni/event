@@ -1,0 +1,14 @@
+{
+  "name": "drupal/event_content",
+  "type": "drupal-module",
+  "description": "Provides Event content entity",
+  "keywords": ["Drupal"],
+  "license": "GPL-2.0+",
+  "homepage": "https://www.drupal.org/project/event_content",
+  "minimum-stability": "dev",
+  "support": {
+    "issues": "https://www.drupal.org/project/issues/event_content",
+    "source": "http://cgit.drupalcode.org/event_content"
+  },
+  "require": { }
+}

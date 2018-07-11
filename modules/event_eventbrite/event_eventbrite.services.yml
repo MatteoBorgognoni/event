@@ -1,0 +1,10 @@
+services:
+  event_eventbrite.parser:
+    class: Drupal\event_eventbrite\EventbriteParser
+    arguments: ['@entity_type.manager', '@field_definition.listener', '@field_storage_definition.listener', '@entity_field.manager', '@entity_type.bundle.info', '@config.factory', '@event.manager']
+  event_eventbrite.manager:
+    class: Drupal\event_eventbrite\EventEventbriteManager
+    arguments: ['@eventbrite.client', '@event_eventbrite.parser', '@event.manager']
+  eventbrite.client:
+    class: Drupal\event_eventbrite\EventbriteClient
+    arguments: ['@config.factory', '@request_stack', '@current_user']

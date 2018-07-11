@@ -1,0 +1,9 @@
+langcode: en
+status: false
+dependencies:
+  module:
+    - event
+id: event.search_result
+label: 'Search result highlighting input'
+targetEntityType: event
+cache: true

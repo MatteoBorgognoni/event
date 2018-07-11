@@ -1,0 +1,10 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - event
+id: event_delete_action
+label: 'Delete event'
+type: event
+plugin: event_delete_action
+configuration: {  }

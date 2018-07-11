@@ -1,0 +1,10 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - event
+id: event_unpromote_action
+label: 'Remove event from front page'
+type: event
+plugin: event_unpromote_action
+configuration: {  }

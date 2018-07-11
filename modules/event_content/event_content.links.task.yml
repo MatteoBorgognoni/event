@@ -1,0 +1,27 @@
+# Event content routing definition
+event_content.settings_tab:
+  route_name: event_content.settings
+  title: 'Settings'
+  base_route: event_content.settings
+
+entity.event_content.canonical:
+  route_name: entity.event_content.canonical
+  base_route: entity.event_content.canonical
+  title: 'View'
+
+entity.event_content.edit_form:
+  route_name: entity.event_content.edit_form
+  base_route: entity.event_content.canonical
+  title: 'Edit'
+
+entity.event_content.version_history:
+  route_name: entity.event_content.version_history
+  base_route: entity.event_content.canonical
+  title: 'Revisions'
+
+entity.event_content.delete_form:
+  route_name:  entity.event_content.delete_form
+  base_route:  entity.event_content.canonical
+  title: Delete
+  weight: 10
+

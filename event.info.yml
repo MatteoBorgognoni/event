@@ -1,0 +1,10 @@
+name: Event
+type: module
+description: 'Allows events to be submitted to the site and displayed on pages.'
+package: Events
+version: VERSION
+core: 8.x
+configure: entity.event_type.collection
+dependencies:
+  - event_venue
+  - event_content

@@ -1,0 +1,12 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - event
+id: event_search
+label: Events
+path: event
+weight: -10
+plugin: event_search
+configuration:
+  rankings: {  }

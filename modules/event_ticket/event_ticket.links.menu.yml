@@ -1,0 +1,18 @@
+
+# Ticket menu items definition
+entity.ticket.collection:
+  title: 'Tickets'
+  route_name: entity.ticket.collection
+  description: 'List Ticket entities'
+  parent: entity.event.collection
+  weight: 100
+
+
+# Ticket type menu items definition
+entity.ticket_type.collection:
+  title: 'Ticket type'
+  route_name: entity.ticket_type.collection
+  description: 'Ticket types'
+  parent: entity.events.modules
+  weight: 99
+

@@ -1,0 +1,28 @@
+bypass event access:
+  title: 'Bypass event access control'
+  description: 'View, edit and delete all events regardless of permission restrictions.'
+  restrict access: true
+administer event types:
+  title: 'Administer event types'
+  description: 'Maintain the types of events available and the fields that are associated with those types.'
+  restrict access: true
+administer events:
+  title: 'Administer events'
+  description: 'Promote, change ownership, edit revisions, and perform other tasks across all event types.'
+  restrict access: true
+access event overview:
+  title: 'Access the Event overview page'
+view own unpublished events:
+  title: 'View own unpublished events'
+view all revisions:
+  title: 'View all revisions'
+  description: 'To view a revision, you also need permission to view the event item.'
+revert all revisions:
+  title: 'Revert all revisions'
+  description: 'To revert a revision, you also need permission to edit the event item.'
+delete all revisions:
+  title: 'Delete all revisions'
+  description: 'To delete a revision, you also need permission to delete the event item.'
+
+permission_callbacks:
+  - \Drupal\event\EventPermissions::eventTypePermissions

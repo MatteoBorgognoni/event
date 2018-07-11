@@ -1,0 +1,18 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - event_ticket.ticket_type.standard
+    - field.storage.ticket.eventbrite_id
+id: ticket.standard.eventbrite_id
+field_name: eventbrite_id
+entity_type: ticket
+bundle: standard
+label: 'Eventbrite Id'
+description: ''
+required: true
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

@@ -1,0 +1,18 @@
+
+# Venue menu items definition
+entity.venue.collection:
+  title: 'Venues'
+  route_name: entity.venue.collection
+  description: 'List Venue entities'
+  parent: entity.event.collection
+  weight: 100
+
+
+# Venue type menu items definition
+entity.venue_type.collection:
+  title: 'Venue types'
+  route_name: entity.venue_type.collection
+  description: 'List Venue type (bundles)'
+  parent: entity.events.modules
+  weight: 99
+

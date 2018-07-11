@@ -1,0 +1,55 @@
+services:
+  event.route_subscriber:
+    class: Drupal\event\Routing\RouteSubscriber
+    tags:
+      - { name: event_subscriber }
+  event.grant_storage:
+    class: Drupal\event\EventGrantDatabaseStorage
+    arguments: ['@database', '@module_handler', '@language_manager']
+    tags:
+      - { name: backend_overridable }
+  access_check.event.revision:
+    class: Drupal\event\Access\EventRevisionAccessCheck
+    arguments: ['@entity.manager']
+    tags:
+      - { name: access_check, applies_to: _access_event_revision }
+  access_check.event.add:
+    class: Drupal\event\Access\EventAddAccessCheck
+    arguments: ['@entity.manager']
+    tags:
+      - { name: access_check, applies_to: _event_add_access }
+  access_check.event.preview:
+    class: Drupal\event\Access\EventPreviewAccessCheck
+    arguments: ['@entity.manager']
+    tags:
+      - { name: access_check, applies_to: _event_preview_access }
+  event.admin_path.route_subscriber:
+    class: Drupal\event\EventSubscriber\EventAdminRouteSubscriber
+    arguments: ['@config.factory']
+    tags:
+      - { name: event_subscriber }
+  event_preview:
+    class: Drupal\event\ParamConverter\EventPreviewConverter
+    arguments: ['@tempstore.private']
+    tags:
+      - { name: paramconverter }
+    lazy: true
+  event.page_cache_response_policy.deny_event_preview:
+    class: Drupal\event\PageCache\DenyEventPreview
+    arguments: ['@current_route_match']
+    public: false
+    tags:
+      - { name: page_cache_response_policy }
+  cache_context.user.event_grants:
+    class: Drupal\event\Cache\EventAccessGrantsCacheContext
+    arguments: ['@current_user']
+    tags:
+      - { name: cache.context }
+  event.event_route_context:
+    class: Drupal\event\ContextProvider\EventRouteContext
+    arguments: ['@current_route_match']
+    tags:
+      - { name: 'context_provider' }
+  event.manager:
+    class: Drupal\event\EventManager
+    arguments: ['@entity_type.manager', "@entity.form_builder", '@database', '@event_dispatcher', '@router.matcher', '@renderer', '@config.factory', '@request_stack', '@current_route_match', '@current_user', '@storage.manager', '@logger.factory']

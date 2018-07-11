@@ -1,0 +1,214 @@
+event:
+  title:
+    type: string
+    key: name.text
+    update: 1
+  eventbrite_id:
+    type: string
+    key: id
+    update: 1
+  eventbrite_url:
+    type: string
+    key: url
+    update: 1
+  date_start:
+    type: datetime
+    key: start.local
+    update: 1
+  date_end:
+    type: datetime
+    key: end.local
+    update: 1
+  created:
+    type: timestamp
+    key: created
+    update: 0
+  changed:
+    type: timestamp
+    key: changed
+    update: 1
+  eventbrite_status:
+    type: status
+    key: status
+    update: 1
+  is_online:
+    type: bool
+    key: online_event
+    update: 1
+  hide_date_start:
+    type: bool
+    key: hide_start_date
+    update: 1
+  hide_date_end:
+    type: bool
+    key: hide_end_date
+    update: 1
+  langcode:
+    type: lang
+    key: locale
+    update: 1
+  is_recurring:
+    type: bool
+    key: is_series
+    update: 1
+  is_free:
+    type: bool
+    key: is_free
+    update: 1
+  tickets:
+    type: reference
+    key: ticket_classes
+    entity_type: ticket
+    bundle: standard
+    multiple: 1
+    update: 1
+  image_main:
+    type: reference
+    key: logo
+    entity_type: media
+    bundle: image
+    update: 0
+  content:
+    type: reference
+    key: ignore
+    entity_type: event_content
+    bundle: event_content
+    update: 1
+  venue:
+    type: reference
+    key: venue
+    entity_type: venue
+    bundle: standard
+    update: 1
+ticket:
+  currency:
+    type: string
+    key: cost.currency
+    update: 1
+  name:
+    type: string
+    key: name
+    update: 1
+  value:
+    type: integer
+    key: cost.value
+  is_free:
+    type: bool
+    key: free
+    update: 1
+  quantity:
+    type: integer
+    key: quantity_total
+    update: 1
+  quantity_sold:
+    type: integer
+    key: quantity_sold
+    update: 1
+  sales_start:
+    type: datetime
+    key: sales_start
+    update: 1
+  sales_end:
+    type: datetime
+    key: sales_end
+    update: 1
+  eventbrite_id:
+    type: string
+    key: id
+    update: 1
+venue:
+  name:
+    type: string
+    key: venue.name
+    update: 1
+  capacity:
+    type: integer
+    key: venue.capacity
+    update: 1
+  address:
+    key: venue.address
+    type: multivalue
+    update: 1
+    children:
+      address_line_1:
+        type: string
+        key: venue.address.address_1
+        update: 1
+      address_line_2:
+        type: string
+        key: venue.address.address_2
+        update: 1
+      city:
+        type: string
+        key: venue.address.city
+        update: 1
+      post_code:
+        type: string
+        key: venue.address.postal_code
+        update: 1
+      country:
+        type: string
+        key: venue.address.country
+        update: 1
+  geolocation:
+    key: ignore
+    type: multivalue
+    update: 1
+    children:
+      lat:
+        type: float
+        key: venue.latitude
+        update: 1
+      lng:
+        type: float
+        key: venue.longitude
+        update: 1
+  eventbrite_id:
+    type: string
+    key: venue_id
+    update: 1
+event_content:
+  name:
+    type: string
+    key: name.text
+    update: 1
+  text_intro:
+    type: string
+    key: description.text
+    update: 0
+  text_summary:
+    type: string
+    key: description.text
+    update: 0
+  created:
+    type: timestamp
+    key: created
+    update: 0
+  changed:
+    type: timestamp
+    key: changed
+    update: 1
+  status:
+    type: status
+    key: status
+    update: 1
+  eventbrite_id:
+    type: string
+    key: id
+    update: 1
+organizer:
+  name:
+    type: string
+    key: organizer.name
+    update: 1
+  description:
+    type: text
+    key: organizer.description.text
+  eventbrite_id:
+    type: string
+    key: organizer_id
+    update: 1
+media:
+  field_image:
+    type: media
+    key: logo.original.url

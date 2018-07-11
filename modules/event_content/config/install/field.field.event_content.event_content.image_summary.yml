@@ -1,0 +1,26 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.event_content.image_summary
+    - media.type.image
+id: event_content.event_content.image_summary
+field_name: image_summary
+entity_type: event_content
+bundle: event_content
+label: 'Summary image'
+description: 'Upload an image that is displayed as a thumbnail in Listing pages and Navigational blocks.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:media'
+  handler_settings:
+    target_bundles:
+      image: image
+    sort:
+      field: _none
+    auto_create: true
+    auto_create_bundle: ''
+field_type: entity_reference

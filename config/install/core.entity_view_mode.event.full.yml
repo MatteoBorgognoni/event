@@ -1,0 +1,9 @@
+langcode: en
+status: false
+dependencies:
+  module:
+    - event
+id: event.full
+label: 'Full content'
+targetEntityType: event
+cache: true

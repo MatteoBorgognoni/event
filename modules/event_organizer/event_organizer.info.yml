@@ -1,0 +1,5 @@
+name: 'Event Organizer'
+type: module
+description: 'Provides the Organiser entity for the event module'
+core: 8.x
+package: 'Events'

@@ -1,0 +1,9 @@
+langcode: en
+status: false
+dependencies:
+  module:
+    - event_content
+id: event_content.header
+label: 'Header'
+targetEntityType: event_content
+cache: true

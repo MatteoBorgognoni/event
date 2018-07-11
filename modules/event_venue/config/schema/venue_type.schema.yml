@@ -1,0 +1,12 @@
+event_venue.venue_type.*:
+  type: config_entity
+  label: 'Venue type config'
+  mapping:
+    id:
+      type: string
+      label: 'ID'
+    label:
+      type: label
+      label: 'Label'
+    uuid:
+      type: string

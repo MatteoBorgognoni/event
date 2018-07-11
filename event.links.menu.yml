@@ -1,0 +1,28 @@
+entity.events.modules:
+  title: 'Events'
+  parent: system.admin_structure
+  description: 'Events'
+  route_name: entity.event_type.collection
+entity.event_type.collection:
+  title: 'Event types'
+  parent: entity.events.modules
+  description: 'Create and manage fields, forms, and display settings for your events.'
+  route_name: entity.event_type.collection
+event.type_add:
+  title: 'Add event type'
+  route_name: event.type_add
+  parent: entity.event_type.collection
+entity.event.content:
+  title: 'Events'
+  parent: system.admin_content
+  description: 'Events'
+  route_name: entity.event.collection
+entity.event.collection:
+  title: 'Events'
+  parent: entity.event.content
+  description: 'Events'
+  route_name: entity.event.collection
+event.add_page:
+  title: 'Add event'
+  route_name: event.add_page
+  parent: entity.event.collection

@@ -1,0 +1,19 @@
+
+event_eventbrite.parse_payload:
+  path: '/event/eventbrite/payload'
+  defaults:
+    _controller: '\Drupal\event_eventbrite\Controller\EventbritePayloadController::parsePayload'
+    _title: 'Parse Payload'
+  requirements:
+    _permission: 'access content'
+
+event_eventbrite.eventbrite_settings:
+  path: '/admin/config/event_eventbrite/eventbritesettings'
+  defaults:
+    _form: '\Drupal\event_eventbrite\Form\EventbriteSettings'
+    _title: 'Eventbrite Settings'
+  requirements:
+    _permission: 'access administration pages'
+  options:
+    _admin_route: TRUE
+

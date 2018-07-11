@@ -1,0 +1,10 @@
+event.type_add:
+  route_name: event.type_add
+  title: 'Add event type'
+  appears_on:
+    - entity.event_type.collection
+event.add_page:
+  route_name: event.add_page
+  title: 'Add event'
+  appears_on:
+    - system.admin_content

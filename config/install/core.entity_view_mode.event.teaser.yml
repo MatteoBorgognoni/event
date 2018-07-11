@@ -1,0 +1,9 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - event
+id: event.teaser
+label: Teaser
+targetEntityType: event
+cache: true

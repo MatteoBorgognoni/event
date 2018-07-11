@@ -1,0 +1,7 @@
+name: 'Event Eventbrite'
+type: module
+description: 'Eventbrite integration'
+core: 8.x
+package: 'Events'
+dependencies:
+  - event

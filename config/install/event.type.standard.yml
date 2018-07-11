@@ -1,0 +1,11 @@
+uuid: f917b1e0-e51b-4351-bdaa-96750bd7f928
+langcode: en
+status: true
+dependencies: {  }
+name: Standard
+type: standard
+description: ''
+help: ''
+new_revision: true
+preview_mode: 1
+display_submitted: false

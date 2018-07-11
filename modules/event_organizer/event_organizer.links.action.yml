@@ -1,0 +1,11 @@
+entity.organizer.add_form:
+  route_name: entity.organizer.add_page
+  title: 'Add Organizer'
+  appears_on:
+    - entity.organizer.collection
+entity.organizer_type.add_form:
+  route_name: entity.organizer_type.add_form
+  title: 'Add Organizer type'
+  appears_on:
+    - entity.organizer_type.collection
+

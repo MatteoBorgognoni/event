@@ -1,0 +1,44 @@
+drupal.event:
+  version: VERSION
+  css:
+    layout:
+      css/event.module.css: {}
+  js:
+    js/event.js: {}
+  dependencies:
+    - core/drupal.entity-form
+    - core/drupalSettings
+
+drupal.event.preview:
+  version: VERSION
+  css:
+    theme:
+      css/event.preview.css: {}
+  js:
+    js/event.preview.js: {}
+  dependencies:
+    - core/jquery
+    - core/jquery.once
+    - core/drupal
+    - core/drupal.form
+
+drupal.event_types:
+  version: VERSION
+  js:
+    js/event_types.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupal.form
+
+form:
+  version: VERSION
+  css:
+    layout:
+      css/event.module.css: {}
+
+drupal.event.admin:
+  version: VERSION
+  css:
+    theme:
+      css/event.admin.css: {}

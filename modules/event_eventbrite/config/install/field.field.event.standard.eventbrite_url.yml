@@ -1,0 +1,18 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - event.type.standard
+    - field.storage.event.eventbrite_url
+id: event.standard.eventbrite_url
+field_name: eventbrite_url
+entity_type: event
+bundle: standard
+label: 'Eventbrite Url'
+description: ''
+required: true
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

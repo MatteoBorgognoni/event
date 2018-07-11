@@ -1,0 +1,156 @@
+# Schema for the views plugins of the Event module.
+
+views.area.event_listing_empty:
+  type: views_area
+  label: 'Event link'
+
+views.argument.event_eid:
+  type: views_argument
+  label: 'Event ID'
+  mapping:
+    break_phrase:
+      type: boolean
+      label: 'Allow multiple values'
+    not:
+      type: boolean
+      label: 'Exclude'
+
+views.argument.event_type:
+  type: views_argument
+  label: 'Event type'
+  mapping:
+    glossary:
+      type: boolean
+      label: 'Glossary mode'
+    limit:
+      type: integer
+      label: 'Character limit'
+    case:
+      type: string
+      label: 'Case'
+    path_case:
+      type: string
+      label: 'Case in path'
+    transform_dash:
+      type: boolean
+      label: 'Transform spaces to dashes in URL'
+    break_phrase:
+      type: boolean
+      label: 'Allow multiple values'
+    add_table:
+      type: boolean
+      label: 'Allow multiple filter values to work together'
+    require_value:
+      type: boolean
+      label: 'Do not display items with no value in summary'
+
+views.argument.event_uid_revision:
+  type: views_argument
+  label: 'Event user ID'
+  mapping:
+    break_phrase:
+      type: boolean
+      label: 'Allow multiple values'
+    not:
+      type: boolean
+      label: 'Exclude'
+
+views.argument.event_vid:
+  type: views_argument
+  label: 'Event revision ID'
+  mapping:
+    break_phrase:
+      type: boolean
+      label: 'Allow multiple values'
+    not:
+      type: boolean
+      label: 'Exclude'
+
+views.field.event:
+  type: views_field
+  label: 'Event'
+  mapping:
+    link_to_event:
+      type: boolean
+      label: 'Link this field to the original piece of content'
+
+views.field.event_bulk_form:
+  type: views_field_bulk_form
+  label: 'Event bulk form'
+
+views.field.event_path:
+  type: views_field
+  label: 'Event path'
+  mapping:
+    absolute:
+      type: boolean
+      label: 'Use absolute link (begins with "http://")'
+
+views.field.event_revision_link:
+  type: views_field
+  label: 'Link to a event revision'
+  mapping:
+    text:
+      type: label
+      label: 'Text to display'
+
+views.field.event_revision_link_delete:
+  type: views_field
+  label: 'Link to delete a event revision'
+  mapping:
+    text:
+      type: label
+      label: 'Text to display'
+
+views.field.event_revision_link_revert:
+  type: views_field
+  label: 'Link to revert a event to a revision'
+  mapping:
+    text:
+      type: label
+      label: 'Text to display'
+
+views.filter.event_access:
+  type: views_filter
+  label: 'Event access'
+
+views.filter.event_status:
+  type: views_filter
+  label: 'Event status'
+
+views.filter.event_uid_revision:
+  type: views_filter
+  label: 'Event revisions of an user'
+  mapping:
+    operator:
+      type: string
+      label: 'Operator'
+    value:
+      type: sequence
+      label: 'Values'
+      sequence:
+        type: string
+        label: 'Value'
+    expose:
+      type: mapping
+      label: 'Expose'
+      mapping:
+        reduce:
+          type: boolean
+          label: 'Reduce'
+
+views.filter_value.event_access:
+  type: string
+  label: 'Access'
+
+views.filter_value.event_status:
+  type: boolean
+  label: 'Status'
+
+views.row.event_rss:
+  type: views_row
+  label: 'Content options'
+  mapping:
+    view_mode:
+      type: string
+      label: 'Display type'

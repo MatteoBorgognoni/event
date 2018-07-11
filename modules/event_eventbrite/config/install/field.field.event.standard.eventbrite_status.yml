@@ -1,0 +1,22 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - event.type.standard
+    - field.storage.event.eventbrite_status
+  module:
+    - options
+id: event.standard.eventbrite_status
+field_name: eventbrite_status
+entity_type: event
+bundle: standard
+label: 'Eventbrite Status'
+description: ''
+required: true
+translatable: true
+default_value:
+  -
+    value: draft
+default_value_callback: ''
+settings: {  }
+field_type: list_string

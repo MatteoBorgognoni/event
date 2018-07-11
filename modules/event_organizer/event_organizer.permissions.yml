@@ -1,0 +1,30 @@
+add organizer entities:
+  title: 'Create new Organizer entities'
+
+administer organizer entities:
+  title: 'Administer Organizer entities'
+  description: 'Allow to access the administration form to configure Organizer entities.'
+  restrict access: true
+
+delete organizer entities:
+  title: 'Delete Organizer entities'
+
+edit organizer entities:
+  title: 'Edit Organizer entities'
+
+view published organizer entities:
+  title: 'View published Organizer entities'
+
+view unpublished organizer entities:
+  title: 'View unpublished Organizer entities'
+
+view all organizer revisions:
+  title: 'View all Organizer revisions'
+
+revert all organizer revisions:
+  title: 'Revert all Organizer revisions'
+  description: 'Role requires permission <em>view Organizer revisions</em> and <em>edit rights</em> for organizer entities in question or <em>administer organizer entities</em>.'
+
+delete all organizer revisions:
+  title: 'Delete all revisions'
+  description: 'Role requires permission to <em>view Organizer revisions</em> and <em>delete rights</em> for organizer entities in question or <em>administer organizer entities</em>.'

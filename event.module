@@ -1,0 +1,1346 @@
+<?php
+
+/**
+ * @file
+ * The core module that allows events to be submitted to the site.
+ *
+ * Modules and scripts may programmatically submit events using the usual form
+ * API pattern.
+ */
+
+use Drupal\Component\Utility\Xss;
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Cache\Cache;
+use Drupal\Core\Database\Query\AlterableInterface;
+use Drupal\Core\Database\Query\SelectInterface;
+use Drupal\Core\Database\StatementInterface;
+use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\Element;
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Template\Attribute;
+use Drupal\Core\Url;
+use Drupal\field\Entity\FieldConfig;
+use Drupal\field\Entity\FieldStorageConfig;
+use Drupal\language\ConfigurableLanguageInterface;
+use Drupal\event\Entity\Event;
+use Drupal\event\Entity\EventType;
+use Drupal\event\EventInterface;
+use Drupal\event\EventTypeInterface;
+
+/**
+ * Denotes that the event is not published.
+ *
+ * @deprecated Scheduled for removal in Drupal 9.0.x.
+ *   Use \Drupal\event\EventInterface::NOT_PUBLISHED instead.
+ *
+ * @see https://www.drupal.org/event/2316145
+ */
+const EVENT_NOT_PUBLISHED = 0;
+
+/**
+ * Denotes that the event is published.
+ *
+ * @deprecated Scheduled for removal in Drupal 9.0.x.
+ *   Use \Drupal\event\EventInterface::PUBLISHED instead.
+ *
+ * @see https://www.drupal.org/event/2316145
+ */
+const EVENT_PUBLISHED = 1;
+
+/**
+ * Denotes that the event is not promoted to the front page.
+ *
+ * @deprecated Scheduled for removal in Drupal 9.0.x.
+ *   Use \Drupal\event\EventInterface::NOT_PROMOTED instead.
+ *
+ * @see https://www.drupal.org/event/2316145
+ */
+const EVENT_NOT_PROMOTED = 0;
+
+/**
+ * Denotes that the event is promoted to the front page.
+ *
+ * @deprecated Scheduled for removal in Drupal 9.0.x.
+ *   Use \Drupal\event\EventInterface::PROMOTED instead.
+ *
+ * @see https://www.drupal.org/event/2316145
+ */
+const EVENT_PROMOTED = 1;
+
+/**
+ * Denotes that the event is not sticky at the top of the page.
+ *
+ * @deprecated Scheduled for removal in Drupal 9.0.x.
+ *   Use \Drupal\event\EventInterface::NOT_STICKY instead.
+ *
+ * @see https://www.drupal.org/event/2316145
+ */
+const EVENT_NOT_STICKY = 0;
+
+/**
+ * Denotes that the event is sticky at the top of the page.
+ *
+ * @deprecated Scheduled for removal in Drupal 9.0.x.
+ *   Use \Drupal\event\EventInterface::STICKY instead.
+ *
+ * @see https://www.drupal.org/event/2316145
+ */
+const EVENT_STICKY = 1;
+
+/**
+ * Implements hook_help().
+ */
+function event_help($route_name, RouteMatchInterface $route_match) {
+  // Remind site administrators about the {event_access} table being flagged
+  // for rebuild. We don't need to issue the message on the confirm form, or
+  // while the rebuild is being processed.
+  if ($route_name != 'event.configure_rebuild_confirm' && $route_name != 'system.batch_page.normal' && $route_name != 'help.page.event' && $route_name != 'help.main'
+    && \Drupal::currentUser()->hasPermission('access administration pages') && event_access_needs_rebuild()) {
+    if ($route_name == 'system.status') {
+      $message = t('The event access permissions need to be rebuilt.');
+    }
+    else {
+      $message = t('The events access permissions need to be rebuilt. <a href=":event_access_rebuild">Rebuild permissions</a>.', [':event_access_rebuild' => \Drupal::url('event.configure_rebuild_confirm')]);
+    }
+    drupal_set_message($message, 'error');
+  }
+
+  switch ($route_name) {
+    case 'help.page.event':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('The Event module manages the creation, editing, deletion, settings, and display of events. Event items managed by the Event module are typically displayed as pages on your site, and include a title, some meta-data (author, creation time, content type, etc.), and optional fields containing text or other data (fields are managed by the <a href=":field">Field module</a>). For more information, see the <a href=":event">online documentation for the Event module</a>.', [':event' => 'https://www.drupal.org/documentation/modules/event', ':field' => \Drupal::url('help.page', ['name' => 'field'])]) . '</p>';
+      $output .= '<h3>' . t('Uses') . '</h3>';
+      $output .= '<dl>';
+      $output .= '<dt>' . t('Creating content') . '</dt>';
+      $output .= '<dd>' . t('When new content is created, the Event module records basic information about the content, including the author, date of creation, and the <a href=":content-type">Content type</a>. It also manages the <em>publishing options</em>, which define whether or not the content is published, promoted to the front page of the site, and/or sticky at the top of content lists. Default settings can be configured for each <a href=":content-type">type of content</a> on your site.', [':content-type' => \Drupal::url('entity.event_type.collection')]) . '</dd>';
+      $output .= '<dt>' . t('Creating custom content types') . '</dt>';
+      $output .= '<dd>' . t('The Event module gives users with the <em>Administer content types</em> permission the ability to <a href=":content-new">create new content types</a> in addition to the default ones already configured. Creating custom content types gives you the flexibility to add <a href=":field">fields</a> and configure default settings that suit the differing needs of various site content.', [':content-new' => \Drupal::url('event.type_add'), ':field' => \Drupal::url('help.page', ['name' => 'field'])]) . '</dd>';
+      $output .= '<dt>' . t('Administering content') . '</dt>';
+      $output .= '<dd>' . t('The <a href=":content">Content</a> page lists your content, allowing you add new content, filter, edit or delete existing content, or perform bulk operations on existing content.', [':content' => \Drupal::url('system.admin_content')]) . '</dd>';
+      $output .= '<dt>' . t('Creating revisions') . '</dt>';
+      $output .= '<dd>' . t('The Event module also enables you to create multiple versions of any content, and revert to older versions using the <em>Revision information</em> settings.') . '</dd>';
+      $output .= '<dt>' . t('User permissions') . '</dt>';
+      $output .= '<dd>' . t('The Event module makes a number of permissions available for each content type, which can be set by role on the <a href=":permissions">permissions page</a>.', [':permissions' => \Drupal::url('user.admin_permissions', [], ['fragment' => 'module-event'])]) . '</dd>';
+      $output .= '</dl>';
+      return $output;
+
+    case 'event.type_add':
+      return '<p>' . t('Individual content types can have different fields, behaviors, and permissions assigned to them.') . '</p>';
+
+    case 'entity.entity_form_display.event.default':
+    case 'entity.entity_form_display.event.form_mode':
+      $type = $route_match->getParameter('event_type');
+      return '<p>' . t('Content items can be edited using different form modes. Here, you can define which fields are shown and hidden when %type content is edited in each form mode, and define how the field form widgets are displayed in each form mode.', ['%type' => $type->label()]) . '</p>';
+
+    case 'entity.entity_view_display.event.default':
+    case 'entity.entity_view_display.event.view_mode':
+      $type = $route_match->getParameter('event_type');
+      return '<p>' . t('Content items can be displayed using different view modes: Teaser, Full content, Print, RSS, etc. <em>Teaser</em> is a short format that is typically used in lists of multiple content items. <em>Full content</em> is typically used when the content is displayed on its own page.') . '</p>' .
+        '<p>' . t('Here, you can define which fields are shown and hidden when %type content is displayed in each view mode, and define how the fields are displayed in each view mode.', ['%type' => $type->label()]) . '</p>';
+
+    case 'entity.event.version_history':
+      return '<p>' . t('Revisions allow you to track differences between multiple versions of your content, and revert to older versions.') . '</p>';
+
+    case 'entity.event.edit_form':
+      $event = $route_match->getParameter('event');
+      $type = EventType::load($event->getType());
+      $help = $type->getHelp();
+      return (!empty($help) ? Xss::filterAdmin($help) : '');
+
+    case 'event.add':
+      $type = $route_match->getParameter('event_type');
+      $help = $type->getHelp();
+      return (!empty($help) ? Xss::filterAdmin($help) : '');
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function event_theme() {
+  return [
+    'event' => [
+      'render element' => 'elements',
+    ],
+    'event_add_list' => [
+      'variables' => ['content' => NULL],
+    ],
+    'event_edit_form' => [
+      'render element' => 'form',
+    ],
+    'field__event__title' => [
+      'base hook' => 'field',
+    ],
+    'field__event__uid' => [
+      'base hook' => 'field',
+    ],
+    'field__event__created' => [
+      'base hook' => 'field',
+    ],
+  ];
+}
+
+/**
+ * Implements hook_entity_view_display_alter().
+ */
+function event_entity_view_display_alter(EntityViewDisplayInterface $display, $context) {
+  if ($context['entity_type'] == 'event') {
+    // Hide field labels in search index.
+    if ($context['view_mode'] == 'search_index') {
+      foreach ($display->getComponents() as $name => $options) {
+        if (isset($options['label'])) {
+          $options['label'] = 'hidden';
+          $display->setComponent($name, $options);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Gathers a listing of links to events.
+ *
+ * @param \Drupal\Core\Database\StatementInterface $result
+ *   A database result object from a query to fetch event entities. If your
+ *   query joins the {comment_entity_statistics} table so that the comment_count
+ *   field is available, a title attribute will be added to show the number of
+ *   comments.
+ * @param $title
+ *   (optional) A heading for the resulting list.
+ *
+ * @return array|false
+ *   A renderable array containing a list of linked event titles fetched from
+ *   $result, or FALSE if there are no rows in $result.
+ */
+function event_title_list(StatementInterface $result, $title = NULL) {
+  $items = [];
+  $num_rows = FALSE;
+  $eids = [];
+  foreach ($result as $row) {
+    // Do not use $event->label() or $event->urlInfo() here, because we only have
+    // database rows, not actual events.
+    $eids[] = $row->eid;
+    $options = !empty($row->comment_count) ? ['attributes' => ['title' => \Drupal::translation()->formatPlural($row->comment_count, '1 comment', '@count comments')]] : [];
+    $items[] = \Drupal::l($row->title, new Url('entity.event.canonical', ['event' => $row->eid], $options));
+    $num_rows = TRUE;
+  }
+
+  return $num_rows ? ['#theme' => 'item_list__event', '#items' => $items, '#title' => $title, '#cache' => ['tags' => Cache::mergeTags(['event_list'], Cache::buildTags('event', $eids))]] : FALSE;
+}
+
+/**
+ * Determines the type of marker to be displayed for a given event.
+ *
+ * @param int $eid
+ *   Event ID whose history supplies the "last viewed" timestamp.
+ * @param int $timestamp
+ *   Time which is compared against event's "last viewed" timestamp.
+ *
+ * @return int
+ *   One of the MARK constants.
+ */
+function event_mark($eid, $timestamp) {
+
+  $cache = &drupal_static(__FUNCTION__, []);
+
+  if (\Drupal::currentUser()->isAnonymous() || !\Drupal::moduleHandler()->moduleExists('history')) {
+    return MARK_READ;
+  }
+  if (!isset($cache[$eid])) {
+    $cache[$eid] = history_read($eid);
+  }
+  if ($cache[$eid] == 0 && $timestamp > HISTORY_READ_LIMIT) {
+    return MARK_NEW;
+  }
+  elseif ($timestamp > $cache[$eid] && $timestamp > HISTORY_READ_LIMIT) {
+    return MARK_UPDATED;
+  }
+  return MARK_READ;
+}
+
+/**
+ * Returns a list of all the available event types.
+ *
+ * This list can include types that are queued for addition or deletion.
+ *
+ * @return \Drupal\event\EventTypeInterface[]
+ *   An array of event type entities, keyed by ID.
+ *
+ * @deprecated in Drupal 8.x, will be removed before Drupal 9.0.
+ *   Use \Drupal\event\Entity\EventType::loadMultiple().
+ *
+ * @see \Drupal\event\Entity\EventType::load()
+ */
+function event_type_get_types() {
+  return EventType::loadMultiple();
+}
+
+/**
+ * Returns a list of available event type names.
+ *
+ * This list can include types that are queued for addition or deletion.
+ *
+ * @return string[]
+ *   An array of event type labels, keyed by the event type name.
+ */
+function event_type_get_names() {
+  return array_map(function ($bundle_info) {
+    return $bundle_info['label'];
+  }, \Drupal::entityManager()->getBundleInfo('event'));
+}
+
+/**
+ * Returns the event type label for the passed event.
+ *
+ * @param \Drupal\event\EventInterface $event
+ *   A event entity to return the event type's label for.
+ *
+ * @return string|false
+ *   The event type label or FALSE if the event type is not found.
+ *
+ * @todo Add this as generic helper method for config entities representing
+ *   entity bundles.
+ */
+function event_get_type_label(EventInterface $event) {
+  $type = EventType::load($event->bundle());
+  return $type ? $type->label() : FALSE;
+}
+
+/**
+ * Description callback: Returns the event type description.
+ *
+ * @param \Drupal\event\EventTypeInterface $event_type
+ *   The event type object.
+ *
+ * @return string
+ *   The event type description.
+ */
+function event_type_get_description(EventTypeInterface $event_type) {
+  return $event_type->getDescription();
+}
+
+/**
+ * Menu argument loader: Loads a event type by string.
+ *
+ * @param $name
+ *   The machine name of a event type to load.
+ *
+ * @return \Drupal\event\EventTypeInterface
+ *   A event type object or NULL if $name does not exist.
+ *
+ * @deprecated in Drupal 8.x, will be removed before Drupal 9.0.
+ *   Use \Drupal\event\Entity\EventType::load().
+ */
+function event_type_load($name) {
+  return EventType::load($name);
+}
+
+
+/**
+ * Implements hook_entity_extra_field_info().
+ */
+function event_entity_extra_field_info() {
+  $extra = [];
+  $description = t('Event module element');
+  foreach (EventType::loadMultiple() as $bundle) {
+    $extra['event'][$bundle->id()]['display']['links'] = [
+      'label' => t('Links'),
+      'description' => $description,
+      'weight' => 100,
+      'visible' => TRUE,
+    ];
+  }
+
+  return $extra;
+}
+
+/**
+ * Updates all events of one type to be of another type.
+ *
+ * @param string $old_id
+ *   The current event type of the events.
+ * @param string $new_id
+ *   The new event type of the events.
+ *
+ * @return
+ *   The number of events whose event type field was modified.
+ */
+function event_type_update_events($old_id, $new_id) {
+  return \Drupal::entityManager()->getStorage('event')->updateType($old_id, $new_id);
+}
+
+/**
+ * Loads event entities from the database.
+ *
+ * This function should be used whenever you need to load more than one event
+ * from the database. Events are loaded into memory and will not require database
+ * access if loaded again during the same page request.
+ *
+ * @param array $eids
+ *   (optional) An array of entity IDs. If omitted, all entities are loaded.
+ * @param bool $reset
+ *   (optional) Whether to reset the internal event_load() cache.  Defaults to
+ *   FALSE.
+ *
+ * @return \Drupal\event\EventInterface[]
+ *   An array of event entities indexed by eid.
+ *
+ * @deprecated in Drupal 8.x, will be removed before Drupal 9.0.
+ *   Use \Drupal\event\Entity\Event::loadMultiple().
+ *
+ * @see entity_load_multiple()
+ * @see \Drupal\Core\Entity\Query\EntityQueryInterface
+ */
+function event_load_multiple(array $eids = NULL, $reset = FALSE) {
+  if ($reset) {
+    \Drupal::entityManager()->getStorage('event')->resetCache($eids);
+  }
+  return Event::loadMultiple($eids);
+}
+
+/**
+ * Loads a event entity from the database.
+ *
+ * @param int $eid
+ *   The event ID.
+ * @param bool $reset
+ *   (optional) Whether to reset the event_load_multiple() cache. Defaults to
+ *   FALSE.
+ *
+ * @return \Drupal\event\EventInterface|null
+ *   A fully-populated event entity, or NULL if the event is not found.
+ *
+ * @deprecated in Drupal 8.x, will be removed before Drupal 9.0.
+ *   Use \Drupal\event\Entity\Event::load().
+ */
+function event_load($eid = NULL, $reset = FALSE) {
+  if ($reset) {
+    \Drupal::entityManager()->getStorage('event')->resetCache([$eid]);
+  }
+  return Event::load($eid);
+}
+
+/**
+ * Loads a event revision from the database.
+ *
+ * @param int $vid
+ *   The event revision id.
+ *
+ * @return \Drupal\event\EventInterface|null
+ *   A fully-populated event entity, or NULL if the event is not found.
+ */
+function event_revision_load($vid = NULL) {
+  return \Drupal::entityTypeManager()->getStorage('event')->loadRevision($vid);
+}
+
+/**
+ * Deletes a event revision.
+ *
+ * @param int $revision_id
+ *   The revision ID to delete.
+ */
+function event_revision_delete($revision_id) {
+  \Drupal::entityTypeManager()->getStorage('event')->deleteRevision($revision_id);
+}
+
+/**
+ * Checks whether the current page is the full page view of the passed-in event.
+ *
+ * @param \Drupal\event\EventInterface $event
+ *   A event entity.
+ *
+ * @return int|false
+ *   The ID of the event if this is a full page view, otherwise FALSE.
+ */
+function event_is_page(EventInterface $event) {
+  $route_match = \Drupal::routeMatch();
+  if ($route_match->getRouteName() == 'entity.event.canonical') {
+    $page_event = $route_match->getParameter('event');
+  }
+  return (!empty($page_event) ? $page_event->id() == $event->id() : FALSE);
+}
+
+/**
+ * Prepares variables for list of available event type templates.
+ *
+ * Default template: event-add-list.html.twig.
+ *
+ * @param array $variables
+ *   An associative array containing:
+ *   - content: An array of content types.
+ *
+ * @see event_add_page()
+ */
+function template_preprocess_event_add_list(&$variables) {
+  $variables['types'] = [];
+  if (!empty($variables['content'])) {
+    foreach ($variables['content'] as $type) {
+      $variables['types'][$type->id()] = [
+        'type' => $type->id(),
+        'add_link' => \Drupal::l($type->label(), new Url('event.add', ['event_type' => $type->id()])),
+        'description' => [
+          '#markup' => $type->getDescription(),
+        ],
+      ];
+    }
+  }
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for HTML document templates.
+ */
+function event_preprocess_html(&$variables) {
+  // If on an individual event page, add the event type to body classes.
+  if (($event = \Drupal::routeMatch()->getParameter('event')) && $event instanceof EventInterface) {
+    $variables['event_type'] = $event->getType();
+  }
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for block templates.
+ */
+function event_preprocess_block(&$variables) {
+  if ($variables['configuration']['provider'] == 'event') {
+    switch ($variables['elements']['#plugin_id']) {
+      case 'event_syndicate_block':
+        $variables['attributes']['role'] = 'complementary';
+        break;
+    }
+  }
+}
+
+/**
+ * Implements hook_theme_suggestions_HOOK().
+ */
+function event_theme_suggestions_event(array $variables) {
+  $suggestions = [];
+  $event = $variables['elements']['#event'];
+  $sanitized_view_mode = strtr($variables['elements']['#view_mode'], '.', '_');
+
+  $suggestions[] = 'event__' . $sanitized_view_mode;
+  $suggestions[] = 'event__' . $event->bundle();
+  $suggestions[] = 'event__' . $event->bundle() . '__' . $sanitized_view_mode;
+  $suggestions[] = 'event__' . $event->id();
+  $suggestions[] = 'event__' . $event->id() . '__' . $sanitized_view_mode;
+
+  return $suggestions;
+}
+
+/**
+ * Prepares variables for event templates.
+ *
+ * Default template: event.html.twig.
+ *
+ * Most themes use their own copy of event.html.twig. The default is located
+ * inside "/core/modules/event/templates/event.html.twig". Look in there for the
+ * full list of variables.
+ *
+ * @param array $variables
+ *   An associative array containing:
+ *   - elements: An array of elements to display in view mode.
+ *   - event: The event object.
+ *   - view_mode: View mode; e.g., 'full', 'teaser', etc.
+ */
+function template_preprocess_event(&$variables) {
+  $variables['view_mode'] = $variables['elements']['#view_mode'];
+  // Provide a distinct $teaser boolean.
+  $variables['teaser'] = $variables['view_mode'] == 'teaser';
+  $variables['event'] = $variables['elements']['#event'];
+  /** @var \Drupal\event\EventInterface $event */
+  $event = $variables['event'];
+  $variables['date'] = \Drupal::service('renderer')->render($variables['elements']['created']);
+  unset($variables['elements']['created']);
+  $variables['author_name'] = \Drupal::service('renderer')->render($variables['elements']['uid']);
+  unset($variables['elements']['uid']);
+
+  $variables['url'] = $event->url('canonical', [
+    'language' => $event->language(),
+  ]);
+  $variables['label'] = $variables['elements']['title'];
+  unset($variables['elements']['title']);
+  // The 'page' variable is set to TRUE in two occasions:
+  //   - The view mode is 'full' and we are on the 'event.view' route.
+  //   - The event is in preview and view mode is either 'full' or 'default'.
+  $variables['page'] = ($variables['view_mode'] == 'full' && (event_is_page($event)) || (isset($event->in_preview) && in_array($event->preview_view_mode, ['full', 'default'])));
+
+  // Helpful $content variable for templates.
+  $variables += ['content' => []];
+  foreach (Element::children($variables['elements']) as $key) {
+    $variables['content'][$key] = $variables['elements'][$key];
+  }
+
+  // Display post information only on certain event types.
+  $event_type = $event->type->entity;
+  // Used by RDF to add attributes around the author and date submitted.
+  $variables['author_attributes'] = new Attribute();
+  $variables['display_submitted'] = $event_type->displaySubmitted();
+  if ($variables['display_submitted']) {
+    if (theme_get_setting('features.event_user_picture')) {
+      // To change user picture settings (e.g. image style), edit the 'compact'
+      // view mode on the User entity. Note that the 'compact' view mode might
+      // not be configured, so remember to always check the theme setting first.
+      $variables['author_picture'] = user_view($event->getOwner(), 'compact');
+    }
+  }
+
+  // Add article ARIA role.
+  $variables['attributes']['role'] = 'article';
+}
+
+/**
+ * Implements hook_cron().
+ */
+function event_cron() {
+  // Calculate the oldest and newest event created times, for use in search
+  // rankings. (Note that field aliases have to be variables passed by
+  // reference.)
+  if (\Drupal::moduleHandler()->moduleExists('search')) {
+    $min_alias = 'min_created';
+    $max_alias = 'max_created';
+    $result = \Drupal::entityQueryAggregate('event')
+      ->aggregate('created', 'MIN', NULL, $min_alias)
+      ->aggregate('created', 'MAX', NULL, $max_alias)
+      ->execute();
+    if (isset($result[0])) {
+      // Make an array with definite keys and store it in the state system.
+      $array = [
+        'min_created' => $result[0][$min_alias],
+        'max_created' => $result[0][$max_alias],
+      ];
+      \Drupal::state()->set('event.min_max_update_time', $array);
+    }
+  }
+}
+
+/**
+ * Implements hook_ranking().
+ */
+function event_ranking() {
+  // Create the ranking array and add the basic ranking options.
+  $ranking = [
+    'relevance' => [
+      'title' => t('Keyword relevance'),
+      // Average relevance values hover around 0.15
+      'score' => 'i.relevance',
+    ],
+    'sticky' => [
+      'title' => t('Content is sticky at top of lists'),
+      // The sticky flag is either 0 or 1, which is automatically normalized.
+      'score' => 'n.sticky',
+    ],
+    'promote' => [
+      'title' => t('Content is promoted to the front page'),
+      // The promote flag is either 0 or 1, which is automatically normalized.
+      'score' => 'n.promote',
+    ],
+  ];
+  // Add relevance based on updated date, but only if it the scale values have
+  // been calculated in event_cron().
+  if ($event_min_max = \Drupal::state()->get('event.min_max_update_time')) {
+    $ranking['recent'] = [
+      'title' => t('Recently created'),
+      // Exponential decay with half life of 14% of the age range of events.
+      'score' => 'EXP(-5 * (1 - (n.created - :event_oldest) / :event_range))',
+      'arguments' => [
+        ':event_oldest' => $event_min_max['min_created'],
+        ':event_range' => max($event_min_max['max_created'] - $event_min_max['min_created'], 1),
+      ],
+    ];
+  }
+  return $ranking;
+}
+
+/**
+ * Implements hook_user_cancel().
+ */
+function event_user_cancel($edit, $account, $method) {
+  switch ($method) {
+    case 'user_cancel_block_unpublish':
+      // Unpublish events (current revisions).
+      $eids = \Drupal::entityQuery('event')
+        ->condition('uid', $account->id())
+        ->execute();
+      module_load_include('inc', 'event', 'event.admin');
+      event_mass_update($eids, ['status' => 0], NULL, TRUE);
+      break;
+
+    case 'user_cancel_reassign':
+      // Anonymize all of the events for this old account.
+      module_load_include('inc', 'event', 'event.admin');
+      $vids = \Drupal::entityManager()->getStorage('event')->userRevisioeids($account);
+      event_mass_update($vids, [
+        'uid' => 0,
+        'revision_uid' => 0,
+      ], NULL, TRUE, TRUE);
+      break;
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_predelete() for user entities.
+ */
+function event_user_predelete($account) {
+  // Delete events (current revisions).
+  // @todo Introduce event_mass_delete() or make event_mass_update() more flexible.
+  $eids = \Drupal::entityQuery('event')
+    ->condition('uid', $account->id())
+    ->accessCheck(FALSE)
+    ->execute();
+  entity_delete_multiple('event', $eids);
+  // Delete old revisions.
+  $storage_controller = \Drupal::entityManager()->getStorage('event');
+  $revisions = $storage_controller->userRevisioeids($account);
+  foreach ($revisions as $revision) {
+    event_revision_delete($revision);
+  }
+}
+
+/**
+ * Finds the most recently changed events that are available to the current user.
+ *
+ * @param $number
+ *   (optional) The maximum number of events to find. Defaults to 10.
+ *
+ * @return \Drupal\event\EventInterface[]
+ *   An array of event entities or an empty array if there are no recent events
+ *   visible to the current user.
+ */
+function event_get_recent($number = 10) {
+  $account = \Drupal::currentUser();
+  $query = \Drupal::entityQuery('event');
+
+  if (!$account->hasPermission('bypass event access')) {
+    // If the user is able to view their own unpublished events, allow them
+    // to see these in addition to published events. Check that they actually
+    // have some unpublished events to view before adding the condition.
+    $access_query = \Drupal::entityQuery('event')
+      ->condition('uid', $account->id())
+      ->condition('status', EventInterface::NOT_PUBLISHED);
+    if ($account->hasPermission('view own unpublished content') && ($own_unpublished = $access_query->execute())) {
+      $query->orConditionGroup()
+        ->condition('status', EventInterface::PUBLISHED)
+        ->condition('eid', $own_unpublished, 'IN');
+    }
+    else {
+      // If not, restrict the query to published events.
+      $query->condition('status', EventInterface::PUBLISHED);
+    }
+  }
+  $eids = $query
+    ->sort('changed', 'DESC')
+    ->range(0, $number)
+    ->addTag('event_access')
+    ->execute();
+
+  $events = Event::loadMultiple($eids);
+
+  return $events ? $events : [];
+}
+
+/**
+ * Generates an array for rendering the given event.
+ *
+ * @param \Drupal\event\EventInterface $event
+ *   A event entity.
+ * @param $view_mode
+ *   (optional) View mode, e.g., 'full', 'teaser', etc. Defaults to 'full.'
+ * @param $langcode
+ *   (optional) A language code to use for rendering. Defaults to NULL which is
+ *   the global content language of the current request.
+ *
+ * @return array
+ *   An array as expected by drupal_render().
+ */
+function event_view(EventInterface $event, $view_mode = 'full', $langcode = NULL) {
+  return entity_view($event, $view_mode, $langcode);
+}
+
+/**
+ * Constructs a drupal_render() style array from an array of loaded events.
+ *
+ * @param $events
+ *   An array of events as returned by Event::loadMultiple().
+ * @param $view_mode
+ *   (optional) View mode, e.g., 'full', 'teaser', etc. Defaults to 'teaser.'
+ * @param $langcode
+ *   (optional) A language code to use for rendering. Defaults to the global
+ *   content language of the current request.
+ *
+ * @return array
+ *   An array in the format expected by drupal_render().
+ */
+function event_view_multiple($events, $view_mode = 'teaser', $langcode = NULL) {
+  return entity_view_multiple($events, $view_mode, $langcode);
+}
+
+/**
+ * Implements hook_page_top().
+ */
+function event_page_top(array &$page) {
+  // Add 'Back to content editing' link on preview page.
+  $route_match = \Drupal::routeMatch();
+  if ($route_match->getRouteName() == 'entity.event.preview') {
+    $page['page_top']['event_preview'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'class' => ['event-preview-container', 'container-inline']
+      ],
+    ];
+
+    $form = \Drupal::formBuilder()->getForm('\Drupal\event\Form\EventPreviewForm', $route_match->getParameter('event_preview'));
+    $page['page_top']['event_preview']['view_mode'] = $form;
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Alters the theme form to use the admin theme on event editing.
+ *
+ * @see event_form_system_themes_admin_form_submit()
+ */
+function event_form_system_themes_admin_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  $form['admin_theme']['use_admin_theme'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Use the administration theme when editing or creating content'),
+    '#description' => t('Control which roles can "View the administration theme" on the <a href=":permissions">Permissions page</a>.', [':permissions' => Url::fromRoute('user.admin_permissions')->toString()]),
+    '#default_value' => \Drupal::configFactory()->getEditable('event.settings')->get('use_admin_theme'),
+  ];
+  $form['#submit'][] = 'event_form_system_themes_admin_form_submit';
+}
+
+/**
+ * Form submission handler for system_themes_admin_form().
+ *
+ * @see event_form_system_themes_admin_form_alter()
+ */
+function event_form_system_themes_admin_form_submit($form, FormStateInterface $form_state) {
+  \Drupal::configFactory()->getEditable('event.settings')
+    ->set('use_admin_theme', $form_state->getValue('use_admin_theme'))
+    ->save();
+  \Drupal::service('router.builder')->setRebuildNeeded();
+}
+
+/**
+ * @defgroup event_access Event access rights
+ * @{
+ * The event access system determines who can do what to which events.
+ *
+ * In determining access rights for a event, \Drupal\event\EventAccessControlHandler
+ * first checks whether the user has the "bypass event access" permission. Such
+ * users have unrestricted access to all events. user 1 will always pass this
+ * check.
+ *
+ * Next, all implementations of hook_event_access() will be called. Each
+ * implementation may explicitly allow, explicitly forbid, or ignore the access
+ * request. If at least one module says to forbid the request, it will be
+ * rejected. If no modules deny the request and at least one says to allow it,
+ * the request will be permitted.
+ *
+ * If all modules ignore the access request, then the event_access table is used
+ * to determine access. All event access modules are queried using
+ * hook_event_grants() to assemble a list of "grant IDs" for the user. This list
+ * is compared against the table. If any row contains the event ID in question
+ * (or 0, which stands for "all events"), one of the grant IDs returned, and a
+ * value of TRUE for the operation in question, then access is granted. Note
+ * that this table is a list of grants; any matching row is sufficient to grant
+ * access to the event.
+ *
+ * In event listings (lists of events generated from a select query, such as the
+ * default home page at path 'event', an RSS feed, a recent content block, etc.),
+ * the process above is followed except that hook_event_access() is not called on
+ * each event for performance reasons and for proper functioning of the pager
+ * system. When adding a event listing to your module, be sure to use an entity
+ * query, which will add a tag of "event_access". This will allow modules dealing
+ * with event access to ensure only events to which the user has access are
+ * retrieved, through the use of hook_query_TAG_alter(). See the
+ * @link entity_api Entity API topic @endlink for more information on entity
+ * queries. Tagging a query with "event_access" does not check the
+ * published/unpublished status of events, so the base query is responsible
+ * for ensuring that unpublished events are not displayed to inappropriate users.
+ *
+ * Note: Even a single module returning an AccessResultInterface object from
+ * hook_event_access() whose isForbidden() method equals TRUE will block access
+ * to the event. Therefore, implementers should take care to not deny access
+ * unless they really intend to. Unless a module wishes to actively forbid
+ * access it should return an AccessResultInterface object whose isAllowed() nor
+ * isForbidden() methods return TRUE, to allow other modules or the event_access
+ * table to control access.
+ *
+ * To see how to write a event access module of your own, see
+ * event_access_example.module.
+ */
+
+/**
+ * Implements hook_event_access().
+ */
+function event_event_access(EventInterface $event, $op, $account) {
+  $type = $event->bundle();
+
+  switch ($op) {
+    case 'create':
+      return AccessResult::allowedIfHasPermission($account, 'create ' . $type . ' content');
+
+    case 'update':
+      if ($account->hasPermission('edit any ' . $type . ' content', $account)) {
+        return AccessResult::allowed()->cachePerPermissions();
+      }
+      else {
+        return AccessResult::allowedIf($account->hasPermission('edit own ' . $type . ' content', $account) && ($account->id() == $event->getOwnerId()))->cachePerPermissions()->cachePerUser()->addCacheableDependency($event);
+      }
+
+    case 'delete':
+      if ($account->hasPermission('delete any ' . $type . ' content', $account)) {
+        return AccessResult::allowed()->cachePerPermissions();
+      }
+      else {
+        return AccessResult::allowedIf($account->hasPermission('delete own ' . $type . ' content', $account) && ($account->id() == $event->getOwnerId()))->cachePerPermissions()->cachePerUser()->addCacheableDependency($event);
+      }
+
+    default:
+      // No opinion.
+      return AccessResult::neutral();
+  }
+}
+
+/**
+ * Fetches an array of permission IDs granted to the given user ID.
+ *
+ * The implementation here provides only the universal "all" grant. A event
+ * access module should implement hook_event_grants() to provide a grant list for
+ * the user.
+ *
+ * After the default grants have been loaded, we allow modules to alter the
+ * grants array by reference. This hook allows for complex business logic to be
+ * applied when integrating multiple event access modules.
+ *
+ * @param string $op
+ *   The operation that the user is trying to perform.
+ * @param \Drupal\Core\Session\AccountInterface $account
+ *   The account object for the user performing the operation.
+ *
+ * @return array
+ *   An associative array in which the keys are realms, and the values are
+ *   arrays of grants for those realms.
+ */
+function event_access_grants($op, AccountInterface $account) {
+  // Fetch event access grants from other modules.
+  $grants = \Drupal::moduleHandler()->invokeAll('event_grants', [$account, $op]);
+  // Allow modules to alter the assigned grants.
+  \Drupal::moduleHandler()->alter('event_grants', $grants, $account, $op);
+
+  return array_merge(['all' => [0]], $grants);
+}
+
+/**
+ * Determines whether the user has a global viewing grant for all events.
+ *
+ * Checks to see whether any module grants global 'view' access to a user
+ * account; global 'view' access is encoded in the {event_access} table as a
+ * grant with eid=0. If no event access modules are enabled, event.module defines
+ * such a global 'view' access grant.
+ *
+ * This function is called when a event listing query is tagged with
+ * 'event_access'; when this function returns TRUE, no event access joins are
+ * added to the query.
+ *
+ * @param $account
+ *   (optional) The user object for the user whose access is being checked. If
+ *   omitted, the current user is used. Defaults to NULL.
+ *
+ * @return
+ *   TRUE if 'view' access to all events is granted, FALSE otherwise.
+ *
+ * @see hook_event_grants()
+ * @see event_query_event_access_alter()
+ */
+function event_access_view_all_events($account = NULL) {
+
+  if (!$account) {
+    $account = \Drupal::currentUser();
+  }
+
+  // Statically cache results in an array keyed by $account->id().
+  $access = &drupal_static(__FUNCTION__);
+  if (isset($access[$account->id()])) {
+    return $access[$account->id()];
+  }
+
+  // If no modules implement the event access system, access is always TRUE.
+  if (!\Drupal::moduleHandler()->getImplementations('event_grants')) {
+    $access[$account->id()] = TRUE;
+  }
+  else {
+    $access[$account->id()] = \Drupal::entityManager()->getAccessControlHandler('event')->checkAllGrants($account);
+  }
+
+  return $access[$account->id()];
+}
+
+
+/**
+ * Implements hook_query_TAG_alter().
+ *
+ * This is the hook_query_alter() for queries tagged with 'event_access'. It adds
+ * event access checks for the user account given by the 'account' meta-data (or
+ * current user if not provided), for an operation given by the 'op' meta-data
+ * (or 'view' if not provided; other possible values are 'update' and 'delete').
+ *
+ * Queries tagged with 'event_access' that are not against the {event} table
+ * must add the base table as metadata. For example:
+ * @code
+ *   $query
+ *     ->addTag('event_access')
+ *     ->addMetaData('base_table', 'taxonomy_index');
+ * @endcode
+ */
+function event_query_event_access_alter(AlterableInterface $query) {
+  // Read meta-data from query, if provided.
+  if (!$account = $query->getMetaData('account')) {
+    $account = \Drupal::currentUser();
+  }
+  if (!$op = $query->getMetaData('op')) {
+    $op = 'view';
+  }
+
+  // If $account can bypass event access, or there are no event access modules,
+  // or the operation is 'view' and the $account has a global view grant
+  // (such as a view grant for event ID 0), we don't need to alter the query.
+  if ($account->hasPermission('bypass event access')) {
+    return;
+  }
+  if (!count(\Drupal::moduleHandler()->getImplementations('event_grants'))) {
+    return;
+  }
+  if ($op == 'view' && event_access_view_all_events($account)) {
+    return;
+  }
+
+  $tables = $query->getTables();
+  $base_table = $query->getMetaData('base_table');
+  // If the base table is not given, default to one of the event base tables.
+  if (!$base_table) {
+    /** @var \Drupal\Core\Entity\Sql\DefaultTableMapping $table_mapping */
+    $table_mapping = \Drupal::entityTypeManager()->getStorage('event')->getTableMapping();
+    $event_base_tables = $table_mapping->getTableNames();
+
+    foreach ($tables as $table_info) {
+      if (!($table_info instanceof SelectInterface)) {
+        $table = $table_info['table'];
+        // Ensure that 'event' and 'event_field_data' are always preferred over
+        // 'event_revision' and 'event_field_revision'.
+        if ($table == 'event' || $table == 'event_field_data') {
+          $base_table = $table;
+          break;
+        }
+        // If one of the event base tables are in the query, add it to the list
+        // of possible base tables to join against.
+        if (in_array($table, $event_base_tables)) {
+          $base_table = $table;
+        }
+      }
+    }
+
+    // Bail out if the base table is missing.
+    if (!$base_table) {
+      throw new Exception(t('Query tagged for event access but there is no event table, specify the base_table using meta data.'));
+    }
+  }
+
+  // Update the query for the given storage method.
+  \Drupal::service('event.grant_storage')->alterQuery($query, $tables, $op, $account, $base_table);
+
+  // Bubble the 'user.event_grants:$op' cache context to the current render
+  // context.
+  $request = \Drupal::requestStack()->getCurrentRequest();
+  $renderer = \Drupal::service('renderer');
+  if ($request->isMethodCacheable() && $renderer->hasRenderContext()) {
+    $build = ['#cache' => ['contexts' => ['user.event_grants:' . $op]]];
+    $renderer->render($build);
+  }
+}
+
+/**
+ * Toggles or reads the value of a flag for rebuilding the event access grants.
+ *
+ * When the flag is set, a message is displayed to users with 'access
+ * administration pages' permission, pointing to the 'rebuild' confirm form.
+ * This can be used as an alternative to direct event_access_rebuild calls,
+ * allowing administrators to decide when they want to perform the actual
+ * (possibly time consuming) rebuild.
+ *
+ * When unsure if the current user is an administrator, event_access_rebuild()
+ * should be used instead.
+ *
+ * @param $rebuild
+ *   (optional) The boolean value to be written.
+ *
+ * @return bool|null
+ *   The current value of the flag if no value was provided for $rebuild. If a
+ *   value was provided for $rebuild, nothing (NULL) is returned.
+ *
+ * @see event_access_rebuild()
+ */
+function event_access_needs_rebuild($rebuild = NULL) {
+  if (!isset($rebuild)) {
+    return \Drupal::state()->get('event.event_access_needs_rebuild') ?: FALSE;
+  }
+  elseif ($rebuild) {
+    \Drupal::state()->set('event.event_access_needs_rebuild', TRUE);
+  }
+  else {
+    \Drupal::state()->delete('event.event_access_needs_rebuild');
+  }
+}
+
+/**
+ * Rebuilds the event access database.
+ *
+ * This rebuild is occasionally needed by modules that make system-wide changes
+ * to access levels. When the rebuild is required by an admin-triggered action
+ * (e.g module settings form), calling event_access_needs_rebuild(TRUE) instead
+ * of event_access_rebuild() lets the user perform his changes and actually
+ * rebuild only once he is done.
+ *
+ * Note : As of Drupal 6, event access modules are not required to (and actually
+ * should not) call event_access_rebuild() in hook_install/uninstall anymore.
+ *
+ * @param $batch_mode
+ *   (optional) Set to TRUE to process in 'batch' mode, spawning processing over
+ *   several HTTP requests (thus avoiding the risk of PHP timeout if the site
+ *   has a large number of events). hook_update_N() and any form submit handler
+ *   are safe contexts to use the 'batch mode'. Less decidable cases (such as
+ *   calls from hook_user(), hook_taxonomy(), etc.) might consider using the
+ *   non-batch mode. Defaults to FALSE.
+ *
+ * @see event_access_needs_rebuild()
+ */
+function event_access_rebuild($batch_mode = FALSE) {
+  $event_storage = \Drupal::entityManager()->getStorage('event');
+  /** @var \Drupal\event\EventAccessControlHandlerInterface $access_control_handler */
+  $access_control_handler = \Drupal::entityManager()->getAccessControlHandler('event');
+  $access_control_handler->deleteGrants();
+  // Only recalculate if the site is using a event_access module.
+  if (count(\Drupal::moduleHandler()->getImplementations('event_grants'))) {
+    if ($batch_mode) {
+      $batch = [
+        'title' => t('Rebuilding content access permissions'),
+        'operations' => [
+          ['_event_access_rebuild_batch_operation', []],
+        ],
+        'finished' => '_event_access_rebuild_batch_finished'
+      ];
+      batch_set($batch);
+    }
+    else {
+      // Try to allocate enough time to rebuild event grants
+      drupal_set_time_limit(240);
+
+      // Rebuild newest events first so that recent content becomes available
+      // quickly.
+      $entity_query = \Drupal::entityQuery('event');
+      $entity_query->sort('eid', 'DESC');
+      // Disable access checking since all events must be processed even if the
+      // user does not have access. And unless the current user has the bypass
+      // event access permission, no events are accessible since the grants have
+      // just been deleted.
+      $entity_query->accessCheck(FALSE);
+      $eids = $entity_query->execute();
+      foreach ($eids as $eid) {
+        $event_storage->resetCache([$eid]);
+        $event = Event::load($eid);
+        // To preserve database integrity, only write grants if the event
+        // loads successfully.
+        if (!empty($event)) {
+          $grants = $access_control_handler->acquireGrants($event);
+          \Drupal::service('event.grant_storage')->write($event, $grants);
+        }
+      }
+    }
+  }
+  else {
+    // Not using any event_access modules. Add the default grant.
+    $access_control_handler->writeDefaultGrant();
+  }
+
+  if (!isset($batch)) {
+    drupal_set_message(t('Content permissions have been rebuilt.'));
+    event_access_needs_rebuild(FALSE);
+  }
+}
+
+/**
+ * Implements callback_batch_operation().
+ *
+ * Performs batch operation for event_access_rebuild().
+ *
+ * This is a multistep operation: we go through all events by packs of 20. The
+ * batch processing engine interrupts processing and sends progress feedback
+ * after 1 second execution time.
+ *
+ * @param array $context
+ *   An array of contextual key/value information for rebuild batch process.
+ */
+function _event_access_rebuild_batch_operation(&$context) {
+  $event_storage = \Drupal::entityManager()->getStorage('event');
+  if (empty($context['sandbox'])) {
+    // Initiate multistep processing.
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['current_event'] = 0;
+    $context['sandbox']['max'] = \Drupal::entityQuery('event')->accessCheck(FALSE)->count()->execute();
+  }
+
+  // Process the next 20 events.
+  $limit = 20;
+  $eids = \Drupal::entityQuery('event')
+    ->condition('eid', $context['sandbox']['current_event'], '>')
+    ->sort('eid', 'ASC')
+    // Disable access checking since all events must be processed even if the
+    // user does not have access. And unless the current user has the bypass
+    // event access permission, no events are accessible since the grants have
+    // just been deleted.
+    ->accessCheck(FALSE)
+    ->range(0, $limit)
+    ->execute();
+  $event_storage->resetCache($eids);
+  $events = Event::loadMultiple($eids);
+  foreach ($events as $eid => $event) {
+    // To preserve database integrity, only write grants if the event
+    // loads successfully.
+    if (!empty($event)) {
+      /** @var \Drupal\event\EventAccessControlHandlerInterface $access_control_handler */
+      $access_control_handler = \Drupal::entityManager()->getAccessControlHandler('event');
+      $grants = $access_control_handler->acquireGrants($event);
+      \Drupal::service('event.grant_storage')->write($event, $grants);
+    }
+    $context['sandbox']['progress']++;
+    $context['sandbox']['current_event'] = $eid;
+  }
+
+  // Multistep processing : report progress.
+  if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
+    $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+  }
+}
+
+/**
+ * Implements callback_batch_finished().
+ *
+ * Performs post-processing for event_access_rebuild().
+ *
+ * @param bool $success
+ *   A boolean indicating whether the re-build process has completed.
+ * @param array $results
+ *   An array of results information.
+ * @param array $operations
+ *   An array of function calls (not used in this function).
+ */
+function _event_access_rebuild_batch_finished($success, $results, $operations) {
+  if ($success) {
+    drupal_set_message(t('The content access permissions have been rebuilt.'));
+    event_access_needs_rebuild(FALSE);
+  }
+  else {
+    drupal_set_message(t('The content access permissions have not been properly rebuilt.'), 'error');
+  }
+}
+
+/**
+ * @} End of "defgroup event_access".
+ */
+
+/**
+ * Implements hook_modules_installed().
+ */
+function event_modules_installed($modules) {
+  // Check if any of the newly enabled modules require the event_access table to
+  // be rebuilt.
+  if (!event_access_needs_rebuild() && array_intersect($modules, \Drupal::moduleHandler()->getImplementations('event_grants'))) {
+    event_access_needs_rebuild(TRUE);
+  }
+}
+
+/**
+ * Implements hook_modules_uninstalled().
+ */
+function event_modules_uninstalled($modules) {
+  // Check whether any of the disabled modules implemented hook_event_grants(),
+  // in which case the event access table needs to be rebuilt.
+  foreach ($modules as $module) {
+    // At this point, the module is already disabled, but its code is still
+    // loaded in memory. Module functions must no longer be called. We only
+    // check whether a hook implementation function exists and do not invoke it.
+    // Event access also needs to be rebuilt if language module is disabled to
+    // remove any language-specific grants.
+    if (!event_access_needs_rebuild() && (\Drupal::moduleHandler()->implementsHook($module, 'event_grants') || $module == 'language')) {
+      event_access_needs_rebuild(TRUE);
+    }
+  }
+
+  // If there remains no more event_access module, rebuilding will be
+  // straightforward, we can do it right now.
+  if (event_access_needs_rebuild() && count(\Drupal::moduleHandler()->getImplementations('event_grants')) == 0) {
+    event_access_rebuild();
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_delete() for 'configurable_language'.
+ */
+function event_configurable_language_delete(ConfigurableLanguageInterface $language) {
+  // On events with this language, unset the language.
+  \Drupal::entityManager()->getStorage('event')->clearRevisionsLanguage($language);
+}
+
+/**
+ * Marks a event to be re-indexed by the event_search plugin.
+ *
+ * @param int $eid
+ *   The event ID.
+ */
+function event_reindex_event_search($eid) {
+  if (\Drupal::moduleHandler()->moduleExists('search')) {
+    // Reindex event context indexed by the event module search plugin.
+    search_mark_for_reindex('event_search', $eid);
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_insert() for comment entities.
+ */
+function event_comment_insert($comment) {
+  // Reindex the event when comments are added.
+  if ($comment->getCommentedEntityTypeId() == 'event') {
+    event_reindex_event_search($comment->getCommentedEntityId());
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_update() for comment entities.
+ */
+function event_comment_update($comment) {
+  // Reindex the event when comments are changed.
+  if ($comment->getCommentedEntityTypeId() == 'event') {
+    event_reindex_event_search($comment->getCommentedEntityId());
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_delete() for comment entities.
+ */
+function event_comment_delete($comment) {
+  // Reindex the event when comments are deleted.
+  if ($comment->getCommentedEntityTypeId() == 'event') {
+    event_reindex_event_search($comment->getCommentedEntityId());
+  }
+}
+
+/**
+ * Implements hook_config_translation_info_alter().
+ */
+function event_config_translation_info_alter(&$info) {
+  $info['event_type']['class'] = 'Drupal\event\ConfigTranslation\EventTypeMapper';
+}

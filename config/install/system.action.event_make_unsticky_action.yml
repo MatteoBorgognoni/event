@@ -1,0 +1,10 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - event
+id: event_make_unsticky_action
+label: 'Make event unsticky'
+type: event
+plugin: event_make_unsticky_action
+configuration: {  }
